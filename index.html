@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Daily Accountability Tracker</title>
+  <style>
+    :root{--bg:#f4f6fa;--panel:#fff;--ink:#172033;--muted:#667085;--line:#e5e9f0;--navy:#101827;--green:#16845b;--green-bg:#e9f7f0;--red:#c33d4b;--red-bg:#fff0f1;--amber:#9a6700;--amber-bg:#fff7df;--blue:#315fc5;--shadow:0 8px 28px rgba(20,35,60,.07)}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    header{background:var(--navy);color:#fff;padding:22px max(20px,calc((100% - 1160px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    header h1{font-size:21px;margin:0;font-weight:750;letter-spacing:-.3px}header p{margin:3px 0 0;color:#b9c4d5;font-size:13px}
+    .sync{font-size:12px;color:#cbd5e1;display:flex;align-items:center;gap:7px}.dot{width:8px;height:8px;border-radius:50%;background:#f5b942}.dot.ok{background:#45c58b}.dot.err{background:#f16b75}
+    main{max-width:1160px;margin:26px auto;padding:0 18px 50px}.topline{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+    .datebar{display:flex;align-items:center;gap:8px}.datebar button,.tab,.smallbtn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:9px 12px;cursor:pointer;font:inherit}.datebar button:hover,.tab:hover,.smallbtn:hover{border-color:#aebbd0}.datebar input{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 11px;font:inherit;color:var(--ink)}
+    .date-title{font-size:20px;font-weight:750;margin:0}.subtle{color:var(--muted);font-size:13px}
+    .tabs{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0}.tab{font-size:13px;font-weight:650}.tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}.stat,.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+    .stat{padding:15px 16px}.stat .label{color:var(--muted);font-size:12px}.stat .value{font-size:25px;font-weight:780;margin-top:4px;letter-spacing:-.6px}.stat .hint{font-size:12px;color:var(--muted)}
+    .panel{padding:18px;margin-top:14px}.panel h2{font-size:16px;margin:0 0 3px}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+    .task-list{display:flex;flex-direction:column;gap:9px}.task{display:grid;grid-template-columns:115px minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:11px;background:#fff}
+    .time{font-size:12px;font-weight:700;color:#475467}.task-name{font-weight:650}.task-note{font-size:12px;color:var(--muted);margin-top:2px}.task-actions{display:flex;gap:7px}.mark{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff;cursor:pointer;font-weight:650;font-size:12px}.mark.done{color:var(--green);border-color:#b8e4cf}.mark.missed{color:var(--red);border-color:#f1c2c7}.mark.selected.done{background:var(--green-bg);border-color:var(--green)}.mark.selected.missed{background:var(--red-bg);border-color:var(--red)}
+    .status{font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.4px;margin-top:4px}.status.done{color:var(--green)}.status.missed{color:var(--red)}.status.pending{color:#8993a4}
+    .reason{grid-column:2/4;background:#fff8f8;border-left:3px solid #e7a1a8;padding:8px 10px;border-radius:5px;font-size:12px;color:#6f3037}.empty{padding:24px;text-align:center;color:var(--muted)}
+    .report-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.report-card{padding:15px;border:1px solid var(--line);border-radius:11px}.report-card strong{display:block;font-size:23px;margin:5px 0}.report-card span{font-size:12px;color:var(--muted)}
+    .bar{height:8px;background:#edf0f5;border-radius:20px;overflow:hidden;margin-top:9px}.bar i{display:block;height:100%;background:var(--green);border-radius:20px}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px 9px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:650}
+    .reason-list{display:flex;flex-direction:column;gap:8px}.reason-row{padding:10px;border:1px solid var(--line);border-radius:9px;font-size:13px}.reason-row b{display:block}.reason-row span{color:var(--muted)}
+    .notice{border-radius:10px;background:#fff7df;color:#72520a;padding:11px 13px;font-size:12px;margin-top:14px}
+    .modal-backdrop{position:fixed;inset:0;background:#10182788;display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal{background:#fff;border-radius:14px;padding:20px;max-width:480px;width:100%;box-shadow:0 20px 60px #0003}.modal h3{margin:0 0 5px}.modal textarea{width:100%;min-height:105px;border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;resize:vertical;margin:12px 0}.modal-actions{display:flex;justify-content:flex-end;gap:8px}.primary{background:var(--navy)!important;color:#fff!important;border-color:var(--navy)!important}
+    .hidden{display:none!important}footer{text-align:center;color:var(--muted);font-size:11px;margin:25px 0}
+    @media(max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.task{grid-template-columns:1fr;gap:7px}.task-actions{grid-row:3}.reason{grid-column:1}.report-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:430px){.report-grid{grid-template-columns:1fr}.date-title{font-size:17px}}
+  </style>
+</head>
+<body>
+<header>
+  <div><h1>Daily Accountability Tracker</h1><p>1 November – 30 December 2026 · Shared progress dashboard</p></div>
+  <div class="sync"><i class="dot" id="syncDot"></i><span id="syncText">Connecting to shared data…</span></div>
+</header>
+<main>
+  <section class="topline">
+    <div><p class="subtle" style="margin:0 0 3px">DAILY SCHEDULE</p><h2 class="date-title" id="dateTitle">Sunday, 1 November 2026</h2></div>
+    <div class="datebar">
+      <button id="prevDay" aria-label="Previous day">‹</button>
+      <input type="date" id="datePicker" min="2026-11-01" max="2026-12-30">
+      <button id="nextDay" aria-label="Next day">›</button>
+      <button id="todayBtn" class="smallbtn">Start date</button>
+    </div>
+  </section>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-view="daily">Daily schedule</button>
+    <button class="tab" data-view="reports">Performance reports</button>
+  </div>
+  <section id="dailyView">
+    <div class="stats" id="dailyStats"></div>
+    <div class="panel">
+      <div class="panel-head"><div><h2>Tasks for this day</h2><div class="subtle">Mark each task as completed or missed. A reason is required for missed tasks.</div></div><div class="subtle" id="dayProgressText"></div></div>
+      <div class="task-list" id="taskList"><div class="empty">Loading your shared schedule…</div></div>
+    </div>
+    <div class="notice">All task updates are saved to the shared JSON file. Your partner sees the same data after refreshing or reopening this page. Both people have equal editing access.</div>
+  </section>
+  <section id="reportsView" class="hidden">
+    <div class="panel">
+      <div class="panel-head"><div><h2>Performance overview</h2><div class="subtle">Completion rate is calculated from tasks marked done or missed. Pending tasks are excluded.</div></div></div>
+      <div class="report-grid" id="reportCards"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2>Daily performance</h2><div class="subtle">Every day in the 60-day tracking period.</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Done</th><th>Missed</th><th>Pending</th><th>Completion</th></tr></thead><tbody id="dailyReportRows"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2>Reasons for missed tasks</h2><div class="subtle">Recorded explanations, grouped by date and task.</div></div></div>
+      <div class="reason-list" id="reasonList"></div>
+    </div>
+  </section>
+  <footer>Shared JSON storage · No browser-only local storage · Tracking period: 60 days</footer>
+</main>
+<div class="modal-backdrop" id="reasonModal">
+  <div class="modal">
+    <h3>Why was this task missed?</h3><div class="subtle" id="missedTaskLabel"></div>
+    <textarea id="reasonInput" placeholder="Enter the reason…" maxlength="1000"></textarea>
+    <div class="modal-actions"><button class="smallbtn" id="cancelReason">Cancel</button><button class="smallbtn primary" id="saveReason">Save as missed</button></div>
+  </div>
+</div>
+<script>
+const START = "2026-11-01", END = "2026-12-30";
+const TASKS = [
+  ["wake","6:15 – 6:30 AM","Wake up and freshen up"],
+  ["volleyball","6:30 – 7:30 AM","Volleyball"],
+  ["morning-routine","7:30 – 9:00 AM","Return home, bath, household chores and breakfast"],
+  ["exercise","9:00 – 10:00 AM","Exercise and relaxation"],
+  ["general-knowledge-1","10:00 – 11:30 AM","Paper 1 – General Knowledge"],
+  ["break","11:30 AM – 12:00 PM","Break"],
+  ["kannada","12:00 – 1:00 PM","Paper 2 – General Kannada"],
+  ["lunch","1:00 – 2:00 PM","Lunch and rest"],
+  ["general-knowledge-2","2:00 – 4:30 PM","Paper 1 – General Knowledge (continued)"],
+  ["evening-routine","4:30 – 7:00 PM","Household chores, bath and personal time"],
+  ["english","7:00 – 8:00 PM","Paper 2 – General English"],
+  ["computer","8:00 – 9:00 PM","Paper 2 – Computer Knowledge"],
+  ["dinner","9:00 – 10:00 PM","Dinner and rest"],
+  ["revision","10:00 – 11:00 PM","Revision, Current Affairs and Practice Tests"],
+  ["sleep","11:00 PM","Sleep"]
+];
+let records = {};
+let selectedDate = START;
+let pendingMiss = null;
+let busy = false;
+let loading = false;
+let dataRevision = 0;
+let loaded = false;
+const $ = id => document.getElementById(id);
+const dates = () => { const a=[]; for(let d=new Date(START+"T12:00:00"),end=new Date(END+"T12:00:00");d<=end;d.setDate(d.getDate()+1))a.push(fmtDate(d)); return a; };
+function fmtDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function prettyDate(s){return new Date(s+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});}
+function dayRecord(date){return records[date]||{};}
+function statsFor(date){const r=dayRecord(date);let done=0,missed=0;for(const t of TASKS){if(r[t[0]]?.status==="done")done++;if(r[t[0]]?.status==="missed")missed++;}const decided=done+missed;return {done,missed,pending:TASKS.length-decided,rate:decided?Math.round(done/decided*100):0,decided};}
+function setSync(kind,msg){$("syncDot").className="dot "+(kind||"");$("syncText").textContent=msg;}
+async function loadData({silent=false}={}){
+  if(loading||busy||document.visibilityState==="hidden")return;
+  loading=true;
+  const revision=dataRevision;
+  if(!silent)setSync("","Loading shared JSON…");
+  try{
+    const res=await fetch("/api/data",{cache:"no-store"});
+    if(!res.ok)throw new Error(await res.text());
+    const data=await res.json();
+    if(!data||typeof data.records!=="object"||!data.records||Array.isArray(data.records))
+      throw new Error("The shared data response has an invalid format.");
+    if(revision!==dataRevision||busy)return;
+    records=data.records;
+    loaded=true;
+    setSync("ok",silent?"Shared data synced":"Shared data connected");
+    render();
+  }catch(e){
+    if(revision===dataRevision){
+      setSync("err","Cannot load shared data");
+      if(!loaded)$("taskList").innerHTML=`<div class="empty">Could not load shared data. Check the Vercel API and GitHub environment variables.<br><small>${escapeHtml(e.message)}</small></div>`;
+    }
+  }finally{loading=false;}
+}
+async function saveTask(date,taskId,status,reason=""){
+  if(busy||!loaded)return;
+  busy=true;
+  setSync("","Saving shared update…");
+  try{
+    const res=await fetch("/api/data",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({date,taskId,status,reason})});
+    let body;
+    try{body=await res.json();}catch{throw new Error("The server returned an invalid response.");}
+    if(!res.ok)throw new Error(body.error||"Save failed");
+    if(!body.data||typeof body.data.records!=="object"||!body.data.records||Array.isArray(body.data.records))
+      throw new Error("The server returned an invalid saved-data response.");
+    records=body.data.records;
+    dataRevision++;
+    setSync("ok","Saved to shared JSON");
+    render();
+  }catch(e){setSync("err","Save failed");alert("Your update was not saved: "+e.message);}
+  finally{busy=false;}
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function render(){ $("datePicker").value=selectedDate;$("dateTitle").textContent=prettyDate(selectedDate);renderDaily();renderReports();}
+function renderDaily(){const s=statsFor(selectedDate);$("dailyStats").innerHTML=`
+  <div class="stat"><div class="label">Completion rate</div><div class="value">${s.rate}%</div><div class="hint">Of tasks you marked</div></div>
+  <div class="stat"><div class="label">Completed</div><div class="value">${s.done}</div><div class="hint">Tasks marked done</div></div>
+  <div class="stat"><div class="label">Missed</div><div class="value">${s.missed}</div><div class="hint">With reasons recorded</div></div>
+  <div class="stat"><div class="label">Pending</div><div class="value">${s.pending}</div><div class="hint">Not yet marked</div></div>`;
+  $("dayProgressText").textContent=`${s.done+s.missed} of ${TASKS.length} marked`;
+  $("taskList").innerHTML=TASKS.map(t=>{const v=dayRecord(selectedDate)[t[0]]||{};const st=["done","missed"].includes(v.status)?v.status:"pending";return `<div class="task"><div class="time">${t[1]}</div><div><div class="task-name">${t[2]}</div><div class="status ${st}">${st==="pending"?"Not marked":st}</div></div><div class="task-actions"><button class="mark done ${st==="done"?"selected":""}" data-task="${t[0]}" data-status="done">✓ Done</button><button class="mark missed ${st==="missed"?"selected":""}" data-task="${t[0]}" data-status="missed">✕ Missed</button></div>${st==="missed"?`<div class="reason"><b>Reason:</b> ${escapeHtml(v.reason||"No reason recorded")}</div>`:""}</div>`;}).join("");
+}
+function aggregate(dayList){let done=0,missed=0,pending=0,days=0;for(const d of dayList){const s=statsFor(d);done+=s.done;missed+=s.missed;pending+=s.pending;if(s.decided)days++;}const decided=done+missed;return {done,missed,pending,rate:decided?Math.round(done/decided*100):0,decided,days};}
+function renderReports(){const all=dates(),week=all.filter(d=>{const x=new Date(d+"T12:00:00"),sel=new Date(selectedDate+"T12:00:00");const start=new Date(sel);start.setDate(sel.getDate()-((sel.getDay()+6)%7));const end=new Date(start);end.setDate(start.getDate()+6);return x>=start&&x<=end;}),month=all.filter(d=>d.slice(0,7)===selectedDate.slice(0,7));
+ const scopes=[["Selected day",aggregate([selectedDate])],["Selected week",aggregate(week)],["Selected month",aggregate(month)],["Entire period",aggregate(all)]];
+ $("reportCards").innerHTML=scopes.map(([name,s])=>`<div class="report-card"><span>${name}</span><strong>${s.rate}%</strong><span>${s.done} done · ${s.missed} missed · ${s.pending} pending</span><div class="bar"><i style="width:${s.rate}%"></i></div></div>`).join("");
+ $("dailyReportRows").innerHTML=all.map(d=>{const s=statsFor(d);return `<tr><td>${prettyDate(d)}</td><td>${s.done}</td><td>${s.missed}</td><td>${s.pending}</td><td>${s.decided?s.rate+"%":"—"}</td></tr>`;}).join("");
+ const reasons=[];for(const d of all){for(const t of TASKS){const v=dayRecord(d)[t[0]];if(v?.status==="missed")reasons.push(`<div class="reason-row"><b>${prettyDate(d)} · ${t[2]}</b><span>${escapeHtml(v.reason||"No reason recorded")}</span></div>`);}}
+ $("reasonList").innerHTML=reasons.length?reasons.reverse().join(""):'<div class="empty">No missed tasks recorded.</div>';
+}
+function changeDate(delta){const i=dates().indexOf(selectedDate);selectedDate=dates()[Math.max(0,Math.min(59,i+delta))];render();}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));$("dailyView").classList.toggle("hidden",b.dataset.view!=="daily");$("reportsView").classList.toggle("hidden",b.dataset.view!=="reports");}));
+$("prevDay").onclick=()=>changeDate(-1);$("nextDay").onclick=()=>changeDate(1);$("todayBtn").onclick=()=>{selectedDate=START;render();};
+$("datePicker").onchange=e=>{if(e.target.value>=START&&e.target.value<=END){selectedDate=e.target.value;render();}};
+$("taskList").addEventListener("click",e=>{const b=e.target.closest("button[data-task]");if(!b||busy)return;const {task,status}=b.dataset;if(status==="done"){saveTask(selectedDate,task,"done","");}else{pendingMiss={date:selectedDate,task};const t=TASKS.find(x=>x[0]===task);$("missedTaskLabel").textContent=`${prettyDate(selectedDate)} · ${t[2]}`;$("reasonInput").value=dayRecord(selectedDate)[task]?.reason||"";$("reasonModal").style.display="flex";$("reasonInput").focus();}});
+function closeModal(){$("reasonModal").style.display="none";pendingMiss=null;}
+$("cancelReason").onclick=closeModal;$("saveReason").onclick=()=>{const reason=$("reasonInput").value.trim();if(!reason){alert("Please enter a reason before marking this task as missed.");return;}const p=pendingMiss;if(p){closeModal();saveTask(p.date,p.task,"missed",reason);}};
+$("reasonModal").addEventListener("click",e=>{if(e.target===$("reasonModal"))closeModal();});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadData({silent:true});});
+window.addEventListener("focus",()=>loadData({silent:true}));
+window.setInterval(()=>loadData({silent:true}),30000);
+loadData();
+</script>
+</body>
+</html>
