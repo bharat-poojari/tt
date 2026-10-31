@@ -22,6 +22,8 @@ This is not static-only hosting: a small Vercel Function (`api/data.js`) is requ
 6. Redeploy after adding environment variables.
 7. Open the same Vercel URL on both devices. No account or login is built in.
 
+If the page reports that shared data is unavailable, confirm it is opened from the Vercel deployment (not a local file or GitHub Pages), verify all three required GitHub environment variables in Vercel, and redeploy after changing them. The page's connection alert shows the API's error detail.
+
 ## Usage
 - Select a date and mark each task Done or Missed.
 - Missed requires a reason.

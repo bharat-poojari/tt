@@ -52,6 +52,11 @@
     <button class="tab" data-view="reports">Performance reports</button>
   </div>
   <section id="dailyView">
+    <div class="notice hidden" id="connectionError" role="alert">
+      <strong>Shared data is unavailable.</strong>
+      <span id="connectionErrorText"></span>
+      <button class="smallbtn" id="retryConnection" type="button">Try again</button>
+    </div>
     <div class="stats" id="dailyStats"></div>
     <div class="panel">
       <div class="panel-head"><div><h2>Tasks for this day</h2><div class="subtle">Mark each task as completed or missed. A reason is required for missed tasks.</div></div><div class="subtle" id="dayProgressText"></div></div>
@@ -115,6 +120,24 @@ function prettyDate(s){return new Date(s+"T12:00:00").toLocaleDateString("en-IN"
 function dayRecord(date){return records[date]||{};}
 function statsFor(date){const r=dayRecord(date);let done=0,missed=0;for(const t of TASKS){if(r[t[0]]?.status==="done")done++;if(r[t[0]]?.status==="missed")missed++;}const decided=done+missed;return {done,missed,pending:TASKS.length-decided,rate:decided?Math.round(done/decided*100):0,decided};}
 function setSync(kind,msg){$("syncDot").className="dot "+(kind||"");$("syncText").textContent=msg;}
+function showConnectionError(message){
+  $("connectionErrorText").textContent=message;
+  $("connectionError").classList.remove("hidden");
+}
+function hideConnectionError(){$("connectionError").classList.add("hidden");}
+async function responseError(res){
+  let detail="";
+  try{
+    const body=await res.json();
+    detail=body&&typeof body.error==="string"?body.error:"";
+  }catch{
+    detail="";
+  }
+  if(res.status===404)
+    return "The /api/data endpoint was not found. Deploy this project to Vercel (static hosting such as GitHub Pages cannot run its API).";
+  if(detail)return `API error (${res.status}): ${detail}`;
+  return `The data API returned HTTP ${res.status}.`;
+}
 async function loadData({silent=false}={}){
   if(loading||busy||document.visibilityState==="hidden")return;
   loading=true;
@@ -122,19 +145,24 @@ async function loadData({silent=false}={}){
   if(!silent)setSync("","Loading shared JSON…");
   try{
     const res=await fetch("/api/data",{cache:"no-store"});
-    if(!res.ok)throw new Error(await res.text());
+    if(!res.ok)throw new Error(await responseError(res));
     const data=await res.json();
     if(!data||typeof data.records!=="object"||!data.records||Array.isArray(data.records))
       throw new Error("The shared data response has an invalid format.");
     if(revision!==dataRevision||busy)return;
     records=data.records;
     loaded=true;
+    hideConnectionError();
     setSync("ok",silent?"Shared data synced":"Shared data connected");
     render();
   }catch(e){
     if(revision===dataRevision){
-      setSync("err","Cannot load shared data");
-      if(!loaded)$("taskList").innerHTML=`<div class="empty">Could not load shared data. Check the Vercel API and GitHub environment variables.<br><small>${escapeHtml(e.message)}</small></div>`;
+      const message=e instanceof TypeError
+        ? "Could not reach the data API. Check the deployment URL and network connection."
+        : e.message||"An unexpected error occurred while loading shared data.";
+      setSync("err","Shared data unavailable");
+      showConnectionError(`${message} Verify the Vercel deployment and its GITHUB_OWNER, GITHUB_REPO, and GITHUB_TOKEN environment variables, then redeploy.`);
+      if(!loaded)$("taskList").innerHTML='<div class="empty">Task controls are unavailable until shared data connects.</div>';
     }
   }finally{loading=false;}
 }
@@ -177,6 +205,7 @@ function renderReports(){const all=dates(),week=all.filter(d=>{const x=new Date(
 function changeDate(delta){const i=dates().indexOf(selectedDate);selectedDate=dates()[Math.max(0,Math.min(59,i+delta))];render();}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));$("dailyView").classList.toggle("hidden",b.dataset.view!=="daily");$("reportsView").classList.toggle("hidden",b.dataset.view!=="reports");}));
 $("prevDay").onclick=()=>changeDate(-1);$("nextDay").onclick=()=>changeDate(1);$("todayBtn").onclick=()=>{selectedDate=START;render();};
+$("retryConnection").onclick=()=>loadData();
 $("datePicker").onchange=e=>{if(e.target.value>=START&&e.target.value<=END){selectedDate=e.target.value;render();}};
 $("taskList").addEventListener("click",e=>{const b=e.target.closest("button[data-task]");if(!b||busy)return;const {task,status}=b.dataset;if(status==="done"){saveTask(selectedDate,task,"done","");}else{pendingMiss={date:selectedDate,task};const t=TASKS.find(x=>x[0]===task);$("missedTaskLabel").textContent=`${prettyDate(selectedDate)} · ${t[2]}`;$("reasonInput").value=dayRecord(selectedDate)[task]?.reason||"";$("reasonModal").style.display="flex";$("reasonInput").focus();}});
 function closeModal(){$("reasonModal").style.display="none";pendingMiss=null;}
