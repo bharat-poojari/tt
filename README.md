@@ -24,6 +24,11 @@ This is not static-only hosting: a small Vercel Function (`api/data.js`) is requ
 
 If the page reports that shared data is unavailable, confirm it is opened from the Vercel deployment (not a local file or GitHub Pages), verify all three required GitHub environment variables in Vercel, and redeploy after changing them. The page's connection alert shows the API's error detail.
 
+## Local environment
+For local development, copy `.env.example` to `.env.local`, add a **new** GitHub token with Contents read/write permission, and run the project with Vercel CLI (`vercel dev`). `.env.local` is excluded from Git. Never commit or share it. For production, add these environment variables in Vercel Project Settings and redeploy; Vercel does not read `.env.local` from GitHub.
+
+If a token is pasted into chat, a file, or another public place, revoke it in GitHub and create a replacement before using the app.
+
 ## Usage
 - Select a date and mark each task Done or Missed.
 - Missed requires a reason.
