@@ -47,6 +47,20 @@ test("GET reports inaccessible repositories instead of treating them as empty", 
   assert.match(response.body.error, /Cannot access GitHub repository test-owner\/test-repo \(404\)/);
 });
 
+test("GET reports a missing data file instead of returning empty records", async t => {
+  t.mock.method(global, "fetch", async url => {
+    if (url.startsWith("https://api.github.com/repos/test-owner/test-repo/contents/"))
+      return {status: 404, ok: false};
+    return {status: 200, ok: true};
+  });
+
+  const response = await invoke("GET");
+
+  assert.equal(response.statusCode, 500);
+  assert.match(response.body.error, /GitHub cannot read data\/data\.json on branch main/);
+  assert.match(response.body.error, /Contents: Read and write permission/);
+});
+
 test("POST writes a valid update and preserves existing records", async t => {
   const existing = {version: 1, records: {"2026-11-01": {wake: {status: "done"}}}};
   let written;

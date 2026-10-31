@@ -35,7 +35,10 @@ async function readFile() {
         `Cannot access GitHub repository ${owner}/${repo} (${repositoryResponse.status}). ` +
         "Check GITHUB_OWNER and GITHUB_REPO, and make sure the GitHub token is authorized for this repository."
       );
-    return {data:{version:1,records:{}},sha:null};
+    throw new Error(
+      `GitHub cannot read ${path} on branch ${branch}. Confirm the file exists and the token has ` +
+      "Contents: Read and write permission for this repository."
+    );
   }
   if (!r.ok) throw new Error(`GitHub read failed (${r.status}): ${await r.text()}`);
   const item = await r.json();
