@@ -1,4 +1,12 @@
 {
   "version": 1,
-  "records": {}
+  "records": {
+    "2026-11-01": {
+      "wake": {
+        "status": "done",
+        "reason": "",
+        "updatedAt": "2026-10-31T15:06:22.497Z"
+      }
+    }
+  }
 }
