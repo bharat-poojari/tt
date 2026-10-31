@@ -38,6 +38,15 @@ test("GET returns the shared records without caching", async t => {
   assert.equal(response.headers["Cache-Control"], "no-store, max-age=0");
 });
 
+test("GET reports inaccessible repositories instead of treating them as empty", async t => {
+  t.mock.method(global, "fetch", async () => ({status: 404, ok: false}));
+
+  const response = await invoke("GET");
+
+  assert.equal(response.statusCode, 500);
+  assert.match(response.body.error, /Cannot access GitHub repository test-owner\/test-repo \(404\)/);
+});
+
 test("POST writes a valid update and preserves existing records", async t => {
   const existing = {version: 1, records: {"2026-11-01": {wake: {status: "done"}}}};
   let written;
@@ -62,6 +71,30 @@ test("POST writes a valid update and preserves existing records", async t => {
   assert.equal(response.body.data.records["2026-11-02"].volleyball.reason, "Rain");
   assert.equal(JSON.parse(Buffer.from(written.content, "base64").toString("utf8"))
     .records["2026-11-02"].volleyball.reason, "Rain");
+});
+
+test("POST explains missing GitHub contents write permission", async t => {
+  const existing = {version: 1, records: {}};
+  t.mock.method(global, "fetch", async (url, options = {}) => {
+    if (options.method === "PUT") {
+      return {
+        ok: false,
+        status: 403,
+        text: async () => '{"message":"Resource not accessible by personal access token"}'
+      };
+    }
+    return githubFile(existing, "sha-1");
+  });
+
+  const response = await invoke("POST", {
+    date: "2026-11-02",
+    taskId: "wake",
+    status: "done"
+  });
+
+  assert.equal(response.statusCode, 500);
+  assert.match(response.body.error, /Contents: Read and write permission/);
+  assert.match(response.body.error, /Resource not accessible by personal access token/);
 });
 
 test("POST rejects impossible calendar dates before accessing GitHub", async t => {

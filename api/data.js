@@ -12,7 +12,8 @@ const branch = process.env.GITHUB_BRANCH || "main";
 const path = process.env.DATA_FILE_PATH || "data/data.json";
 const token = process.env.GITHUB_TOKEN;
 const encodedPath = path.split("/").map(encodeURIComponent).join("/");
-const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+const repositoryApi = `https://api.github.com/repos/${owner}/${repo}`;
+const api = `${repositoryApi}/contents/${encodedPath}`;
 const headers = {
   "Accept": "application/vnd.github+json",
   "Authorization": `Bearer ${token}`,
@@ -27,7 +28,15 @@ function send(res, code, body) {
 }
 async function readFile() {
   const r = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, {headers});
-  if (r.status === 404) return {data:{version:1,records:{}},sha:null};
+  if (r.status === 404) {
+    const repositoryResponse = await fetch(repositoryApi, {headers});
+    if (!repositoryResponse.ok)
+      throw new Error(
+        `Cannot access GitHub repository ${owner}/${repo} (${repositoryResponse.status}). ` +
+        "Check GITHUB_OWNER and GITHUB_REPO, and make sure the GitHub token is authorized for this repository."
+      );
+    return {data:{version:1,records:{}},sha:null};
+  }
   if (!r.ok) throw new Error(`GitHub read failed (${r.status}): ${await r.text()}`);
   const item = await r.json();
   if (!item || typeof item.content !== "string" || typeof item.sha !== "string")
@@ -44,7 +53,16 @@ async function writeFile(data, sha) {
   const body = {message:"Update shared daily schedule data",content,branch};
   if (sha) body.sha=sha;
   const r = await fetch(api,{method:"PUT",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify(body)});
-  if (!r.ok) throw new Error(`GitHub write failed (${r.status}): ${await r.text()}`);
+  if (!r.ok) {
+    const detail = await r.text();
+    if (r.status === 403)
+      throw new Error(
+        `GitHub denied the write (403). Give the fine-grained token access to ${owner}/${repo} ` +
+        "with Contents: Read and write permission, then update GITHUB_TOKEN in Vercel and redeploy. " +
+        `GitHub response: ${detail}`
+      );
+    throw new Error(`GitHub write failed (${r.status}): ${detail}`);
+  }
 }
 module.exports = async (req,res) => {
   if (!owner || !repo || !token)

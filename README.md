@@ -12,6 +12,7 @@ This is not static-only hosting: a small Vercel Function (`api/data.js`) is requ
 3. Create a GitHub fine-grained personal access token:
    - Repository access: only the repository you created.
    - Repository permissions: **Contents: Read and write**.
+   - The token must be authorized for the exact `GITHUB_OWNER` and `GITHUB_REPO` configured in Vercel.
 4. Import the repository into Vercel and deploy.
 5. In Vercel → Project → Settings → Environment Variables, add:
    - `GITHUB_TOKEN` = the token above
@@ -22,7 +23,7 @@ This is not static-only hosting: a small Vercel Function (`api/data.js`) is requ
 6. Redeploy after adding environment variables.
 7. Open the same Vercel URL on both devices. No account or login is built in.
 
-If the page reports that shared data is unavailable, confirm it is opened from the Vercel deployment (not a local file or GitHub Pages), verify all three required GitHub environment variables in Vercel, and redeploy after changing them. The page's connection alert shows the API's error detail.
+If the page reports that shared data is unavailable, confirm it is opened from the Vercel deployment (not a local file or GitHub Pages), verify all five GitHub environment variables in Vercel, and redeploy after changing them. For GitHub `403` errors, ensure the token is authorized for the configured repository and has **Contents: Read and write** permission. The page's connection alert shows the API's error detail.
 
 ## Local environment
 For local development, copy `.env.example` to `.env.local`, add a **new** GitHub token with Contents read/write permission, and run the project with Vercel CLI (`vercel dev`). `.env.local` is excluded from Git. Never commit or share it. For production, add these environment variables in Vercel Project Settings and redeploy; Vercel does not read `.env.local` from GitHub.
