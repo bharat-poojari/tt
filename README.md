@@ -1,6 +1,6 @@
 # Daily Accountability Tracker
 
-A no-framework HTML/CSS/JavaScript tracker for 1 Nov–30 Dec 2026. Both users see and edit the same records. Each task update is stored in `data/data.json` in a GitHub repository through a Vercel serverless function.
+A no-framework HTML/CSS/JavaScript tracker for a daily routine and study schedule. Both users can view the same records, but task updates are limited to the current day in India time. Each update is stored in `data/data.json` in a GitHub repository through a Vercel serverless function.
 
 ## Important architecture note
 This is not static-only hosting: a small Vercel Function (`api/data.js`) is required to keep the GitHub token secret and write the JSON file. No database or browser localStorage is used.
@@ -31,9 +31,10 @@ For local development, copy `.env.example` to `.env.local`, add a **new** GitHub
 If a token is pasted into chat, a file, or another public place, revoke it in GitHub and create a replacement before using the app.
 
 ## Usage
-- Select a date and mark each task Done or Missed.
-- Missed requires a reason.
-- Updates are written to the shared JSON file. The page refreshes shared records every 30 seconds and when it becomes active; reloading also retrieves the latest records.
+- The schedule opens on today's date (India time) and advances to the new day automatically.
+- Browse other dates to read their schedules and progress; only today's tasks can be updated.
+- Mark an unrecorded task Done or Missed. A reason is required for Missed, and the action buttons disappear after the task is recorded.
+- Progress syncs through the shared JSON file every 30 seconds and when the page becomes active; reloading also retrieves the latest records.
 - Performance reports show selected day, selected week (Monday–Sunday), selected month, and the full tracking period.
 - Pending tasks are excluded from the completion-rate denominator. The report separately displays pending counts.
 

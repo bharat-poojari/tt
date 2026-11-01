@@ -1,8 +1,6 @@
 // Vercel serverless function: persistent shared JSON file in GitHub.
-const START = "2026-11-01";
-const END = "2026-12-30";
 const TASK_IDS = new Set([
-  "wake","volleyball","morning-routine","exercise","general-knowledge-1","break",
+  "wake","morning-routine","exercise","general-knowledge-1","break",
   "kannada","lunch","general-knowledge-2","evening-routine","english","computer",
   "dinner","revision","sleep"
 ]);
@@ -25,6 +23,16 @@ function send(res, code, body) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store, max-age=0");
   res.end(JSON.stringify(body));
+}
+function todayInIndia() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 async function readFile() {
   const r = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, {headers});
@@ -84,8 +92,10 @@ module.exports = async (req,res) => {
       ? new Date(`${date}T00:00:00.000Z`)
       : null;
     if (!parsedDate || Number.isNaN(parsedDate.getTime()) ||
-        parsedDate.toISOString().slice(0,10)!==date || date<START || date>END)
-      return send(res,400,{error:"Date is outside the tracking period."});
+        parsedDate.toISOString().slice(0,10)!==date)
+      return send(res,400,{error:"Date must be a valid calendar date."});
+    if (date !== todayInIndia())
+      return send(res,400,{error:"Tasks can only be updated for today."});
     if (!TASK_IDS.has(taskId)) return send(res,400,{error:"Unknown task."});
     if (!["done","missed"].includes(status)) return send(res,400,{error:"Status must be done or missed."});
     if (status==="missed" && (typeof reason!=="string" || !reason.trim()))

@@ -39,17 +39,17 @@
 </head>
 <body>
 <header>
-  <div><h1>Daily Accountability Tracker</h1><p>1 November – 30 December 2026 · Shared progress dashboard</p></div>
-  <div class="sync"><i class="dot" id="syncDot"></i><span id="syncText">Connecting to shared data…</span></div>
+  <div><h1>Daily Accountability Tracker</h1><p>Your daily routine and study schedule</p></div>
+  <div class="sync"><i class="dot" id="syncDot"></i><span id="syncText">Connecting…</span></div>
 </header>
 <main>
   <section class="topline">
     <div><p class="eyebrow">YOUR DAILY SCHEDULE</p><h2 class="date-title" id="dateTitle">Sunday, 1 November 2026</h2></div>
     <div class="datebar">
       <button id="prevDay" aria-label="Previous day">‹</button>
-      <input type="date" id="datePicker" min="2026-11-01" max="2026-12-30">
+      <input type="date" id="datePicker">
       <button id="nextDay" aria-label="Next day">›</button>
-      <button id="todayBtn" class="smallbtn">Start date</button>
+      <button id="todayBtn" class="smallbtn">Today</button>
     </div>
   </section>
   <div class="tabs" role="tablist">
@@ -58,16 +58,15 @@
   </div>
   <section id="dailyView">
     <div class="notice hidden" id="connectionError" role="alert">
-      <strong>Shared data is unavailable.</strong>
+      <strong>Schedule connection unavailable.</strong>
       <span id="connectionErrorText"></span>
       <button class="smallbtn" id="retryConnection" type="button">Try again</button>
     </div>
     <div class="stats" id="dailyStats"></div>
     <div class="panel">
-      <div class="panel-head"><div><h2>Tasks for this day</h2><div class="subtle">Mark each task as completed or missed. A reason is required for missed tasks.</div></div><div class="subtle" id="dayProgressText"></div></div>
-      <div class="task-list" id="taskList"><div class="empty">Loading your shared schedule…</div></div>
+      <div class="panel-head"><div><h2>Tasks for this day</h2><div class="subtle">Only today's tasks can be updated. A reason is required for missed tasks.</div></div><div class="subtle" id="dayProgressText"></div></div>
+      <div class="task-list" id="taskList"><div class="empty">Loading your schedule…</div></div>
     </div>
-    <div class="notice"><strong>Shared progress</strong><span>Updates sync automatically, so you both see the same schedule and progress.</span></div>
   </section>
   <section id="reportsView" class="hidden">
     <div class="panel">
@@ -75,7 +74,7 @@
       <div class="report-grid" id="reportCards"></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div><h2>Daily performance</h2><div class="subtle">Every day in the 60-day tracking period.</div></div></div>
+      <div class="panel-head"><div><h2>Daily performance</h2><div class="subtle">Daily progress across the schedule.</div></div></div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Done</th><th>Missed</th><th>Pending</th><th>Completion</th></tr></thead><tbody id="dailyReportRows"></tbody></table></div>
     </div>
     <div class="panel">
@@ -83,7 +82,6 @@
       <div class="reason-list" id="reasonList"></div>
     </div>
   </section>
-  <footer>Shared JSON storage · No browser-only local storage · Tracking period: 60 days</footer>
 </main>
 <div class="modal-backdrop" id="reasonModal">
   <div class="modal">
@@ -95,9 +93,8 @@
 <script>
 const START = "2026-11-01", END = "2026-12-30";
 const TASKS = [
-  ["wake","6:15 – 6:30 AM","Wake up and freshen up"],
-  ["volleyball","6:30 – 7:30 AM","Volleyball"],
-  ["morning-routine","7:30 – 9:00 AM","Return home, bath, household chores and breakfast"],
+  ["wake","7:00 – 7:15 AM","Wake up and freshen up"],
+  ["morning-routine","7:15 – 9:00 AM","Household chores and breakfast"],
   ["exercise","9:00 – 10:00 AM","Exercise and relaxation"],
   ["general-knowledge-1","10:00 – 11:30 AM","Paper 1 – General Knowledge"],
   ["break","11:30 AM – 12:00 PM","Break"],
@@ -112,7 +109,7 @@ const TASKS = [
   ["sleep","11:00 PM","Sleep"]
 ];
 let records = {};
-let selectedDate = START;
+let selectedDate = todayDate();
 let pendingMiss = null;
 let busy = false;
 let loading = false;
@@ -121,6 +118,11 @@ let loaded = false;
 const $ = id => document.getElementById(id);
 const dates = () => { const a=[]; for(let d=new Date(START+"T12:00:00"),end=new Date(END+"T12:00:00");d<=end;d.setDate(d.getDate()+1))a.push(fmtDate(d)); return a; };
 function fmtDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function todayDate(){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  const values=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 function prettyDate(s){return new Date(s+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});}
 function dayRecord(date){return records[date]||{};}
 function statsFor(date){const r=dayRecord(date);let done=0,missed=0;for(const t of TASKS){if(r[t[0]]?.status==="done")done++;if(r[t[0]]?.status==="missed")missed++;}const decided=done+missed;return {done,missed,pending:TASKS.length-decided,rate:decided?Math.round(done/decided*100):0,decided};}
@@ -147,7 +149,7 @@ async function loadData({silent=false}={}){
   if(loading||busy||document.visibilityState==="hidden")return;
   loading=true;
   const revision=dataRevision;
-  if(!silent)setSync("","Loading shared JSON…");
+  if(!silent)setSync("","Loading schedule…");
   try{
     const res=await fetch("/api/data",{cache:"no-store"});
     if(!res.ok)throw new Error(await responseError(res));
@@ -158,23 +160,24 @@ async function loadData({silent=false}={}){
     records=data.records;
     loaded=true;
     hideConnectionError();
-    setSync("ok",silent?"Shared data synced":"Shared data connected");
+    setSync("ok",silent?"Synced":"Connected");
     render();
   }catch(e){
     if(revision===dataRevision){
       const message=e instanceof TypeError
         ? "Could not reach the data API. Check the deployment URL and network connection."
-        : e.message||"An unexpected error occurred while loading shared data.";
-      setSync("err","Shared data unavailable");
+        : e.message||"An unexpected error occurred while loading your schedule.";
+      setSync("err","Connection error");
       showConnectionError(`${message} Verify the Vercel deployment and its GITHUB_OWNER, GITHUB_REPO, and GITHUB_TOKEN environment variables, then redeploy.`);
-      if(!loaded)$("taskList").innerHTML='<div class="empty">Task controls are unavailable until shared data connects.</div>';
+      if(!loaded)$("taskList").innerHTML='<div class="empty">Your schedule is unavailable until the connection is restored.</div>';
     }
   }finally{loading=false;}
 }
 async function saveTask(date,taskId,status,reason=""){
   if(busy||!loaded)return;
+  if(date!==todayDate()){selectedDate=todayDate();render();return;}
   busy=true;
-  setSync("","Saving shared update…");
+  setSync("","Saving…");
   try{
     const res=await fetch("/api/data",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({date,taskId,status,reason})});
     let body;
@@ -184,7 +187,7 @@ async function saveTask(date,taskId,status,reason=""){
       throw new Error("The server returned an invalid saved-data response.");
     records=body.data.records;
     dataRevision++;
-    setSync("ok","Saved to shared JSON");
+    setSync("ok","Saved");
     render();
   }catch(e){setSync("err","Save failed");alert("Your update was not saved: "+e.message);}
   finally{busy=false;}
@@ -197,7 +200,8 @@ function renderDaily(){const s=statsFor(selectedDate);$("dailyStats").innerHTML=
   <div class="stat"><div class="label">Missed</div><div class="value">${s.missed}</div><div class="hint">With reasons recorded</div></div>
   <div class="stat"><div class="label">Pending</div><div class="value">${s.pending}</div><div class="hint">Not yet marked</div></div>`;
   $("dayProgressText").textContent=`${s.done+s.missed} of ${TASKS.length} marked`;
-  $("taskList").innerHTML=TASKS.map(t=>{const v=dayRecord(selectedDate)[t[0]]||{};const st=["done","missed"].includes(v.status)?v.status:"pending";return `<div class="task"><div class="time">${t[1]}</div><div><div class="task-name">${t[2]}</div><div class="status ${st}">${st==="pending"?"Not marked":st}</div></div><div class="task-actions"><button class="mark done ${st==="done"?"selected":""}" data-task="${t[0]}" data-status="done">✓ Done</button><button class="mark missed ${st==="missed"?"selected":""}" data-task="${t[0]}" data-status="missed">✕ Missed</button></div>${st==="missed"?`<div class="reason"><b>Reason:</b> ${escapeHtml(v.reason||"No reason recorded")}</div>`:""}</div>`;}).join("");
+  const editable=selectedDate===todayDate();
+  $("taskList").innerHTML=TASKS.map(t=>{const v=dayRecord(selectedDate)[t[0]]||{};const st=["done","missed"].includes(v.status)?v.status:"pending";const actions=editable&&st==="pending"?`<div class="task-actions"><button class="mark done" data-task="${t[0]}" data-status="done">✓ Done</button><button class="mark missed" data-task="${t[0]}" data-status="missed">✕ Missed</button></div>`:"";return `<div class="task"><div class="time">${t[1]}</div><div><div class="task-name">${t[2]}</div><div class="status ${st}">${st==="pending"?"Not marked":st}</div></div>${actions}${st==="missed"?`<div class="reason"><b>Reason:</b> ${escapeHtml(v.reason||"No reason recorded")}</div>`:""}</div>`;}).join("");
 }
 function aggregate(dayList){let done=0,missed=0,pending=0,days=0;for(const d of dayList){const s=statsFor(d);done+=s.done;missed+=s.missed;pending+=s.pending;if(s.decided)days++;}const decided=done+missed;return {done,missed,pending,rate:decided?Math.round(done/decided*100):0,decided,days};}
 function renderReports(){const all=dates(),week=all.filter(d=>{const x=new Date(d+"T12:00:00"),sel=new Date(selectedDate+"T12:00:00");const start=new Date(sel);start.setDate(sel.getDate()-((sel.getDay()+6)%7));const end=new Date(start);end.setDate(start.getDate()+6);return x>=start&&x<=end;}),month=all.filter(d=>d.slice(0,7)===selectedDate.slice(0,7));
@@ -207,18 +211,20 @@ function renderReports(){const all=dates(),week=all.filter(d=>{const x=new Date(
  const reasons=[];for(const d of all){for(const t of TASKS){const v=dayRecord(d)[t[0]];if(v?.status==="missed")reasons.push(`<div class="reason-row"><b>${prettyDate(d)} · ${t[2]}</b><span>${escapeHtml(v.reason||"No reason recorded")}</span></div>`);}}
  $("reasonList").innerHTML=reasons.length?reasons.reverse().join(""):'<div class="empty">No missed tasks recorded.</div>';
 }
-function changeDate(delta){const i=dates().indexOf(selectedDate);selectedDate=dates()[Math.max(0,Math.min(59,i+delta))];render();}
+function changeDate(delta){const date=new Date(`${selectedDate}T12:00:00`);date.setDate(date.getDate()+delta);selectedDate=fmtDate(date);render();}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));$("dailyView").classList.toggle("hidden",b.dataset.view!=="daily");$("reportsView").classList.toggle("hidden",b.dataset.view!=="reports");}));
-$("prevDay").onclick=()=>changeDate(-1);$("nextDay").onclick=()=>changeDate(1);$("todayBtn").onclick=()=>{selectedDate=START;render();};
+$("prevDay").onclick=()=>changeDate(-1);$("nextDay").onclick=()=>changeDate(1);$("todayBtn").onclick=()=>{selectedDate=todayDate();render();};
 $("retryConnection").onclick=()=>loadData();
-$("datePicker").onchange=e=>{if(e.target.value>=START&&e.target.value<=END){selectedDate=e.target.value;render();}};
-$("taskList").addEventListener("click",e=>{const b=e.target.closest("button[data-task]");if(!b||busy)return;const {task,status}=b.dataset;if(status==="done"){saveTask(selectedDate,task,"done","");}else{pendingMiss={date:selectedDate,task};const t=TASKS.find(x=>x[0]===task);$("missedTaskLabel").textContent=`${prettyDate(selectedDate)} · ${t[2]}`;$("reasonInput").value=dayRecord(selectedDate)[task]?.reason||"";$("reasonModal").style.display="flex";$("reasonInput").focus();}});
+$("datePicker").onchange=e=>{const value=e.target.value;if(/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(`${value}T00:00:00.000Z`).toISOString().slice(0,10)===value){selectedDate=value;render();}};
+$("taskList").addEventListener("click",e=>{const b=e.target.closest("button[data-task]");if(!b||busy||selectedDate!==todayDate())return;const {task,status}=b.dataset;if(status==="done"){saveTask(selectedDate,task,"done","");}else{pendingMiss={date:selectedDate,task};const t=TASKS.find(x=>x[0]===task);$("missedTaskLabel").textContent=`${prettyDate(selectedDate)} · ${t[2]}`;$("reasonInput").value=dayRecord(selectedDate)[task]?.reason||"";$("reasonModal").style.display="flex";$("reasonInput").focus();}});
 function closeModal(){$("reasonModal").style.display="none";pendingMiss=null;}
 $("cancelReason").onclick=closeModal;$("saveReason").onclick=()=>{const reason=$("reasonInput").value.trim();if(!reason){alert("Please enter a reason before marking this task as missed.");return;}const p=pendingMiss;if(p){closeModal();saveTask(p.date,p.task,"missed",reason);}};
 $("reasonModal").addEventListener("click",e=>{if(e.target===$("reasonModal"))closeModal();});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadData({silent:true});});
 window.addEventListener("focus",()=>loadData({silent:true}));
 window.setInterval(()=>loadData({silent:true}),30000);
+let lastKnownToday=todayDate();
+window.setInterval(()=>{const current=todayDate();if(current!==lastKnownToday){lastKnownToday=current;selectedDate=current;closeModal();render();}},30000);
 loadData();
 </script>
 </body>

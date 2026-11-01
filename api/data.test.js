@@ -7,6 +7,16 @@ process.env.GITHUB_BRANCH = "main";
 process.env.GITHUB_TOKEN = "test-token";
 
 const handler = require("./data");
+function todayInIndia() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 function githubFile(data, sha) {
   return {
@@ -61,7 +71,7 @@ test("GET reports a missing data file instead of returning empty records", async
   assert.match(response.body.error, /Contents: Read and write permission/);
 });
 
-test("POST writes a valid update and preserves existing records", async t => {
+test("POST writes today's update and preserves existing records", async t => {
   const existing = {version: 1, records: {"2026-11-01": {wake: {status: "done"}}}};
   let written;
   t.mock.method(global, "fetch", async (url, options = {}) => {
@@ -73,18 +83,18 @@ test("POST writes a valid update and preserves existing records", async t => {
   });
 
   const response = await invoke("POST", {
-    date: "2026-11-02",
-    taskId: "volleyball",
+    date: todayInIndia(),
+    taskId: "exercise",
     status: "missed",
     reason: "Rain"
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body.data.records["2026-11-01"], existing.records["2026-11-01"]);
-  assert.equal(response.body.data.records["2026-11-02"].volleyball.status, "missed");
-  assert.equal(response.body.data.records["2026-11-02"].volleyball.reason, "Rain");
+  assert.equal(response.body.data.records["2026-11-01"].wake.status, "done");
+  assert.equal(response.body.data.records[todayInIndia()].exercise.status, "missed");
+  assert.equal(response.body.data.records[todayInIndia()].exercise.reason, "Rain");
   assert.equal(JSON.parse(Buffer.from(written.content, "base64").toString("utf8"))
-    .records["2026-11-02"].volleyball.reason, "Rain");
+    .records[todayInIndia()].exercise.reason, "Rain");
 });
 
 test("POST explains missing GitHub contents write permission", async t => {
@@ -101,7 +111,7 @@ test("POST explains missing GitHub contents write permission", async t => {
   });
 
   const response = await invoke("POST", {
-    date: "2026-11-02",
+    date: todayInIndia(),
     taskId: "wake",
     status: "done"
   });
@@ -143,8 +153,8 @@ test("POST retries a GitHub content conflict using the latest file", async t => 
   });
 
   const response = await invoke("POST", {
-    date: "2026-11-02",
-    taskId: "volleyball",
+    date: todayInIndia(),
+    taskId: "exercise",
     status: "done"
   });
 
@@ -152,5 +162,36 @@ test("POST retries a GitHub content conflict using the latest file", async t => 
   assert.equal(reads, 2);
   assert.equal(writes, 2);
   assert.equal(response.body.data.records["2026-11-01"].sleep.reason, "Late");
-  assert.equal(response.body.data.records["2026-11-02"].volleyball.status, "done");
+  assert.equal(response.body.data.records[todayInIndia()].exercise.status, "done");
+});
+
+test("POST rejects updates for any date other than today before accessing GitHub", async t => {
+  let requests = 0;
+  t.mock.method(global, "fetch", async () => { requests++; });
+  const yesterday = new Date(`${todayInIndia()}T00:00:00.000Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const response = await invoke("POST", {
+    date: yesterday.toISOString().slice(0, 10),
+    taskId: "wake",
+    status: "done"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.error, "Tasks can only be updated for today.");
+  assert.equal(requests, 0);
+});
+
+test("POST rejects the removed volleyball task", async t => {
+  let requests = 0;
+  t.mock.method(global, "fetch", async () => { requests++; });
+
+  const response = await invoke("POST", {
+    date: todayInIndia(),
+    taskId: "volleyball",
+    status: "done"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.error, "Unknown task.");
+  assert.equal(requests, 0);
 });
